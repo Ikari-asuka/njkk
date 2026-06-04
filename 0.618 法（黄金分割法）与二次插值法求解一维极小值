@@ -1,0 +1,81 @@
+import math
+
+# ====================== 定义4个目标函数 ======================
+def f1(x): return math.exp(-x) + x**2
+def f2(x): return 3*x**4 - 4*x**3 - 12*x**2
+def f3(x): return x**4 + 2*x + 4
+def f4(x): return x**3 - 3*x + 1
+
+funcs = [f1, f2, f3, f4]
+func_names = [
+    "f(x)=e^(-x)+x²",
+    "f(x)=3x⁴−4x³−12x²",
+    "f(x)=x⁴+2x+4",
+    "f(x)=x³−3x+1"
+]
+# 对应每个函数的搜索区间
+intervals = [(0, 1), (1, 3), (-1, 0), (0, 2)]
+
+# ====================== 0.618法（黄金分割法） ======================
+def golden_section(f, a, b, eps=1e-4):
+    alpha = 0.618
+    beta = 1 - alpha
+    x1 = a + beta*(b - a)
+    x2 = a + alpha*(b - a)
+    f1_val = f(x1)
+    f2_val = f(x2)
+    iter_num = 0
+    while abs(b - a) > eps:
+        iter_num += 1
+        if f1_val < f2_val:
+            b = x2
+            x2 = x1
+            f2_val = f1_val
+            x1 = a + beta*(b - a)
+            f1_val = f(x1)
+        else:
+            a = x1
+            x1 = x2
+            f1_val = f2_val
+            x2 = a + alpha*(b - a)
+            f2_val = f(x2)
+    x_opt = (a + b)/2
+    return x_opt, f(x_opt), iter_num
+
+# ====================== 二次插值法 ======================
+def quadratic_interp(f, x0, x1, x2, eps=1e-4, max_iter=50):
+    iter_num = 0
+    for _ in range(max_iter):
+        iter_num += 1
+        f0, f1, f2 = f(x0), f(x1), f(x2)
+        # 二次插值极值点公式
+        numer = (x1**2 - x2**2)*f0 + (x2**2 - x0**2)*f1 + (x0**2 - x1**2)*f2
+        denom = 2*((x1 - x2)*f0 + (x2 - x0)*f1 + (x0 - x1)*f2)
+        if abs(denom) < 1e-12:
+            break
+        x3 = numer / denom
+        if abs(x3 - x1) < eps:
+            return x3, f(x3), iter_num
+        # 保留三点：x0,x1,x2 → 去掉离x3最远的
+        pts = sorted([(x0,f0), (x1,f1), (x2,f2), (x3,f(x3))], key=lambda p: abs(p[0]-x3))
+        x0, x1, x2 = pts[0][0], pts[1][0], pts[2][0]
+    return x3, f(x3), iter_num
+
+# ====================== 批量计算输出 ======================
+if __name__ == "__main__":
+    eps = 1e-4
+    for i in range(4):
+        f = funcs[i]
+        name = func_names[i]
+        a,b = intervals[i]
+        print("="*60)
+        print(f"【{i+1}】{name}")
+        # 0.618法
+        x_g, f_g, it_g = golden_section(f, a, b, eps)
+        print(f"0.618法: x*={x_g:.6f}, f(x*)={f_g:.6f}, 迭代{it_g}次")
+        # 二次插值：取区间三等分点为初始三点
+        x0 = a
+        x1 = (a+b)/2
+        x2 = b
+        x_q, f_q, it_q = quadratic_interp(f, x0, x1, x2, eps)
+        print(f"二次插值: x*={x_q:.6f}, f(x*)={f_q:.6f}, 迭代{it_q}次")
